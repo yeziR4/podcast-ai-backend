@@ -1,0 +1,24 @@
+# Render.com configuration file
+# This enables automatic deployments from GitHub
+
+services:
+  - type: web
+    name: podcast-ai-backend
+    env: node
+    plan: free  # Change to 'starter' for better performance
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: SERP_API_KEY
+        sync: false  # Set manually in Render dashboard
+      - key: GEMINI_API_KEY
+        sync: false  # Set manually in Render dashboard
+      - key: CACHE_TTL
+        value: 3600
+      - key: MAX_REQUESTS_PER_MINUTE
+        value: 30

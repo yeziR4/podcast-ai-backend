@@ -1,0 +1,25 @@
+{
+  "name": "podcast-ai-backend",
+  "version": "1.0.0",
+  "description": "AI-powered backend for podcast generator with intelligent web search",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": ["podcast", "ai", "search", "serp", "gemini"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "axios": "^1.6.0",
+    "dotenv": "^16.3.1",
+    "@google/generative-ai": "^0.2.0",
+    "node-cache": "^5.1.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
