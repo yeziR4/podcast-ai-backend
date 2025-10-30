@@ -43,11 +43,29 @@ app.get('/', (req, res) => {
     endpoints: {
       health: '/api/health',
       search: '/api/search/intelligent (POST)',
-      basicSearch: '/api/search/basic (POST)'
+      basicSearch: '/api/search/basic (POST)',
+      debug: '/api/debug/check-env (GET)' 
     },
     documentation: 'https://github.com/yourusername/podcast-backend'
   });
 });
+
+// Debug endpoint - Check environment variables
+app.get('/api/debug/check-env', (req, res) => {
+  const serpApiKey = process.env.SERP_API_KEY;
+  res.json({
+    success: true,
+    apiKeys: {
+      serpApi: {
+        configured: !!serpApiKey,
+        length: serpApiKey ? serpApiKey.length : 0,
+        prefix: serpApiKey ? serpApiKey.substring(0, 10) + "..." : "NOT_SET"
+      }
+    },
+    message: serpApiKey ? "✅ SERP API key loaded" : "❌ NOT loaded"
+  });
+});
+
 
 // Error handling
 app.use(errorHandler);
