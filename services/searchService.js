@@ -95,23 +95,70 @@ export async function basicSearch({ query, numResults = 5 }) {
  */
 async function performSerpSearch(query, numResults = 5) {
   const apiKey = process.env.SERP_API_KEY;
-  
-  if (!apiKey) {
-    throw new Error('SERP_API_KEY is not configured');
-  }
 
-  try {
-    console.log(`   Searching: "${query}"`);
+if (!apiKey) {
+  console.error('❌ SERP_API_KEY is not configured');
+  throw new Error('SERP_API_KEY is not configured');
+}
+
+// Log API key info
+console.log('\n🔑 API Key Check:');
+console.log(`   - Length: ${apiKey.length}`);
+console.log(`   - First 10: ${apiKey.substring(0, 10)}...`);
+console.log(`   - Has whitespace: ${apiKey !== apiKey.trim() ? 'YES ⚠️' : 'NO ✅'}`);
+
+// CRITICAL FIX: Trim whitespace
+const trimmedKey = apiKey.trim();
+
+try {
+  console.log(`\n📡 Calling SERP API for: "${query}"`);
+  
+  const response = await axios.get('https://serpapi.com/search', {
+    params: {
+      engine: 'google',
+      q: query,
+      api_key: trimmedKey,  // ← USE TRIMMED KEY
+      num: numResults
+    },
+    timeout: 10000
+  });
+
+  console.log(`✅ SERP API Success! Results: ${response.data.organic_results?.length || 0}`);
+
+  const organicResults = response.data.organic_results || [];
+  
+  return organicResults.map(result => ({
+    title: result.title,
+    link: result.link,
+    snippet: result.snippet,
+    displayLink: result.displayed_link,
+    source: result.source,
+    date: result.date
+  }));
+
+} catch (error) {
+  console.error('\n❌ SERP API Failed:');
+  
+  if (error.response) {
+    console.error(`   Status: ${error.response.status}`);
+    console.error(`   Error:`, error.response.data);
     
-    const response = await axios.get('https://serpapi.com/search', {
-      params: {
-        engine: 'google',
-        q: query,
-        api_key: apiKey,
-        num: numResults
-      },
-      timeout: 10000
-    });
+    if (error.response.status === 401) {
+      console.error('\n🔴 401 - Invalid API Key!');
+      console.error(`   Key used (first 10): ${trimmedKey.substring(0, 10)}...`);
+      console.error('   Check: https://serpapi.com/manage-api-key');
+    }
+    
+    throw new Error(`SERP API returned ${error.response.status}: ${error.response.data?.error || 'Unknown error'}`);
+  } else if (error.request) {
+    console.error('   No response from SERP API');
+    throw new Error('SERP API did not respond');
+  } else {
+    console.error(`   Error: ${error.message}`);
+    throw error;
+  }
+}
+
 
     // Extract organic results
     const organicResults = response.data.organic_results || [];
