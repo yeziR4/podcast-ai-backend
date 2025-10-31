@@ -91,73 +91,117 @@ export async function basicSearch({ query, numResults = 5 }) {
 }
 
 /**
- * Perform actual SERP API search
+ * Perform actual SERPER.DEV API search
+ * NOTE: Using SERPER.DEV, not SERPAPI.COM!
  */
 async function performSerpSearch(query, numResults = 5) {
   const apiKey = process.env.SERP_API_KEY;
-
+  
+  // Enhanced API key check
   if (!apiKey) {
-    console.error('❌ SERP_API_KEY is not configured');
+    console.error('❌ SERP_API_KEY is not configured in environment');
     throw new Error('SERP_API_KEY is not configured');
   }
 
-  // Log API key info
+  // Log API key info (safely)
   console.log('\n🔑 API Key Check:');
+  console.log(`   - Loaded: YES`);
   console.log(`   - Length: ${apiKey.length}`);
-  console.log(`   - First 10: ${apiKey.substring(0, 10)}...`);
-  console.log(`   - Has whitespace: ${apiKey !== apiKey.trim() ? 'YES ⚠️' : 'NO ✅'}`);
-
-  // CRITICAL FIX: Trim whitespace
+  console.log(`   - First 10 chars: ${apiKey.substring(0, 10)}...`);
+  console.log(`   - Service: SERPER.DEV ✅`);
+  
+  // Trim whitespace
   const trimmedKey = apiKey.trim();
+  
+  if (trimmedKey !== apiKey) {
+    console.log('⚠️  WARNING: API key had whitespace! Trimmed it.');
+  }
 
   try {
-    console.log(`\n📡 Calling SERP API for: "${query}"`);
+    console.log(`\n📡 Calling SERPER.DEV API:`);
+    console.log(`   Query: "${query}"`);
+    console.log(`   NumResults: ${numResults}`);
+    console.log(`   Endpoint: https://google.serper.dev/search`);
     
-    const response = await axios.get('https://serpapi.com/search', {
-      params: {
-        engine: 'google',
+    // SERPER.DEV API CALL
+    // Different from SERPAPI.COM:
+    // - POST method (not GET)
+    // - X-API-KEY header (not api_key param)
+    // - Different response format
+    const response = await axios.post(
+      'https://google.serper.dev/search',
+      {
         q: query,
-        api_key: trimmedKey,  // ← USE TRIMMED KEY
         num: numResults
       },
-      timeout: 10000
-    });
+      {
+        headers: {
+          'X-API-KEY': trimmedKey,
+          'Content-Type': 'application/json'
+        },
+        timeout: 10000
+      }
+    );
 
-    console.log(`✅ SERP API Success! Results: ${response.data.organic_results?.length || 0}`);
+    console.log(`✅ SERPER.DEV API Success!`);
+    console.log(`   Status: ${response.status}`);
+    console.log(`   Results found: ${response.data.organic?.length || 0}`);
 
-    // Extract organic results
-    const organicResults = response.data.organic_results || [];
+    // Extract organic results (SERPER.DEV uses "organic", not "organic_results")
+    const organicResults = response.data.organic || [];
     
+    // Map SERPER.DEV response format to your expected format
     return organicResults.map(result => ({
       title: result.title,
       link: result.link,
       snippet: result.snippet,
-      displayLink: result.displayed_link,
-      source: result.source,
+      displayLink: result.link,
+      source: result.source || extractDomain(result.link),
       date: result.date
     }));
 
   } catch (error) {
-    console.error('\n❌ SERP API Failed:');
+    console.error('\n❌ SERPER.DEV API Request Failed:');
     
     if (error.response) {
+      // Server responded with error status
       console.error(`   Status: ${error.response.status}`);
-      console.error(`   Error:`, error.response.data);
+      console.error(`   Status Text: ${error.response.statusText}`);
+      console.error(`   Error Data:`, JSON.stringify(error.response.data, null, 2));
       
+      // Check if it's a 401 (Invalid API key)
       if (error.response.status === 401) {
-        console.error('\n🔴 401 - Invalid API Key!');
+        console.error('\n🔴 401 UNAUTHORIZED - API Key Issue!');
+        console.error('   Your SERPER.DEV API key is invalid');
+        console.error('   Check: https://serper.dev/dashboard');
         console.error(`   Key used (first 10): ${trimmedKey.substring(0, 10)}...`);
-        console.error('   Check: https://serpapi.com/manage-api-key');
       }
       
-      throw new Error(`SERP API returned ${error.response.status}: ${error.response.data?.error || 'Unknown error'}`);
+      throw new Error(`SERPER.DEV API returned ${error.response.status}: ${error.response.data?.message || error.response.data?.error || 'Unknown error'}`);
+      
     } else if (error.request) {
-      console.error('   No response from SERP API');
-      throw new Error('SERP API did not respond');
+      // Request was made but no response received
+      console.error('   No response received from SERPER.DEV API');
+      console.error('   This might be a network issue');
+      throw new Error('SERPER.DEV API did not respond');
+      
     } else {
+      // Something else went wrong
       console.error(`   Error: ${error.message}`);
       throw error;
     }
+  }
+}
+
+/**
+ * Extract domain from URL
+ */
+function extractDomain(url) {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.hostname;
+  } catch {
+    return url;
   }
 }
 
